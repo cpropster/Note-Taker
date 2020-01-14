@@ -1,15 +1,6 @@
 const userContainer = document.querySelector("#user-info");
 const notesContainer = document.querySelector("#note-info");
 const notesInputContainer = document.querySelector("#note-input");
-const textInput = document.querySelector("input");
-
-notesInputContainer.addEventListener("submit", (event) => {
-  event.preventDefault;
-  const note = {
-    text: textInput.value,
-  };
-  axios.post(`${API}/users/${user.id}/notes`, note);
-});
 
 let user, notes;
 
@@ -27,7 +18,7 @@ const fetchUser = async () => {
       return fetchUser();
     }
   }
-  const user = (await axios.get(`${API}/users/random`)).data;
+  user = (await axios.get(`${API}/users/random`)).data;
   storage.setItem("userId", user.id);
   return user;
 };
@@ -43,32 +34,59 @@ const renderUser = () => {
 };
 
 const renderNotes = () => {
-  const html = `
-    <h2 class="text-center">Notes <span id="note-count">(${
-      notes.length
-    })</span></h2>
-    ${notes
-      .map((note) => {
-        return `<button type="button" class="close" aria-label="Close">
-        <span aria-hidden="true">&times;</span>
-      </button> ${note.text}<br><br>`;
-      })
-      .join("")}
-    `;
+  let html = notes
+    .map((note) => {
+      return `
+      <li>
+      ${note.text}
+      ${note.archived}
+      <button type="button" class="close" aria-label="Close">
+      <span aria-hidden="true" data-id='${note.id}'>&times;</span>
+    </button>
+  </li>`;
+    })
+    .join("");
+
+  html = `<h2>Notes (${notes.length})</h2><ul>${html}</ul>`;
 
   notesContainer.innerHTML = html;
 };
 
-// const renderNoteInput = () => {
-//   const html = `
-//     <form>
-//     <input name='text'/>
-//     <button>Create Note</button>
-//     </form>
-//     `;
+const renderNoteInput = () => {
+  return `
+        <form id="noteInputForm">
+        <input name='text'/>
+        <button>Create Note</button>
+        </form>
+        `;
+};
 
-//   notesInputContainer.innerHTML = html;
-// };
+notesInputContainer.innerHTML = renderNoteInput();
+const notesForm = document.querySelector("#noteInputForm");
+const textInput = document.querySelector("input");
+
+notesContainer.addEventListener("click", async (event) => {
+  const id = event.target.getAttribute("data-id");
+  console.log(id);
+  if (id) {
+    await axios.delete(`${API}/users/${user.id}/notes/${id}`);
+  }
+  notes = notes.filter((note) => note.id !== id);
+  renderNotes();
+});
+console.log(notesForm);
+notesForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const note = {
+    text: textInput.value,
+  };
+  const response = await axios.post(`${API}/users/${user.id}/notes`, note);
+  const created = response.data;
+  notes = [...notes, created];
+  renderNotes();
+  textInput.value = "";
+  console.log(notes);
+});
 
 const startApp = async () => {
   user = await fetchUser();
